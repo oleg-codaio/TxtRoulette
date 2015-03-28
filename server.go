@@ -24,7 +24,7 @@ func main() {
 	if len(os.Args) != 2 {
 		log.Fatal("usage: server.go port")
 	}
-	port := os.Args[1]
+	port := ":" + os.Args[1]
 
 	// Start the server.
 	fmt.Printf("Starting TxtRoulette server on port %s...\n", port)
