@@ -21,7 +21,7 @@ var pairs = make(map[*User]*User)
 var lobby = make(map[*User]bool, 0)
 
 // Mutex for writing to state.
-var mutex = sync.Mutex
+var mutex = &sync.Mutex{}
 
 func MatchLobbiedUsers() {
 	if len(lobby) < 2 {
