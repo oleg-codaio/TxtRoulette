@@ -11,13 +11,19 @@ import (
 	"strings"
 )
 
+type User struct {
+	phoneNumber string
+	recent      [5]*User
+	blocked     []*User
+}
+
 func receive(w http.ResponseWriter, r *http.Request) {
 
 	wholeurl := r.URL.String()
 	body := r.URL.Query()["Body"]
 	phone := r.URL.Query()["From"]
 
-	//fmt.Printf("wholeurl:\n%s\n\nPhone: %s\nBody: %s,\n\n", wholeurl, phone, body)
+	fmt.Printf("wholeurl:\n%s\n\nPhone: %s\nBody: %s,\n\n", wholeurl, phone, body)
 }
 
 func sendSMS(phonenumber, message string) {
