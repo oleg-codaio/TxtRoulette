@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 )
 
 // Map from phone number <=> User.
@@ -18,6 +19,9 @@ var pairs = make(map[*User]*User)
 
 // Lobby of unpaired Users.
 var lobby = make(map[*User]bool, 0)
+
+// Mutex for writing to state.
+var mutex = sync.Mutex
 
 func MatchLobbiedUsers() {
 	if len(lobby) < 2 {
@@ -54,6 +58,8 @@ func MatchLobbiedUsers() {
 }
 
 func Receive(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	msg := strings.TrimSpace(r.URL.Query()["Body"][0])
 	num := r.URL.Query()["From"][0]
 
