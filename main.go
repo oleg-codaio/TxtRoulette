@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/ovaskevich/TxtRoulette/server"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -23,5 +24,8 @@ func main() {
 	// Start the server.
 	fmt.Printf("Starting TxtRoulette server on port %s...\n", port)
 	http.HandleFunc("/receive/", server.Receive)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "Welcome to TxtRoulette! Text CONNECT to 320-839-8785 to join.")
+	})
 	log.Fatal(http.ListenAndServe(port, nil))
 }

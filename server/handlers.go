@@ -28,25 +28,38 @@ func MatchLobbiedUsers() {
 		return
 	}
 	for u1 := range lobby {
+	NextUserLoop:
 		for u2 := range lobby {
 			if u1 == u2 { //don't match with self
 				continue
 			}
 			for _, block := range u1.blocked {
 				if block == u2 {
-					continue //u1 blocked u2
+					continue NextUserLoop //u1 blocked u2
 				}
 			}
 			for _, block := range u2.blocked {
 				if block == u1 {
-					continue //u2 blocked u1
+					continue NextUserLoop //u2 blocked u1
 				}
 			}
 
+			for _, recent := range u1.recent {
+				if recent == u2 {
+					continue NextUserLoop //u1 was recently paired with u2
+				}
+			}
+			for _, recent := range u2.recent {
+				if recent == u1 {
+					continue NextUserLoop //u2 was recently paired with u1
+				}
+			}
 			pairs[u1] = u2
 			pairs[u2] = u1
-			sendSMS(u1.phoneNumber, "you've been paired with another person, say hi!")
-			sendSMS(u2.phoneNumber, "you've been paired with another person, say hi!")
+			u1.AddToRecents(u2)
+			u2.AddToRecents(u1)
+			sendSMS(u1.phoneNumber, "You've been paired with another person - say hi!")
+			sendSMS(u2.phoneNumber, "You've been paired with another person - say hi!")
 			fmt.Printf("paired %s & %s\n", u1.phoneNumber, u2.phoneNumber)
 			//remove the users from the lobby
 			delete(lobby, u1)
@@ -79,6 +92,7 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 			// Add user to users
 			u := NewUser(num)
 			users[num] = u
+			sendInstructions(num)
 		} else if isPaired {
 			//sendSMS(num, "Invalid command. Use NEXT, DISCONNECT, or BLOCK.")
 			sendSMS(num, "You're already chatting with someone! txt DISCONNECT to leave or try talking to someone new with NEXT.")
@@ -91,17 +105,14 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 		// Add the user to the lobby
 		lobby[users[num]] = true
 		fmt.Printf("Added %s to lobby\n", num)
-		sendSMS(num, "Hang tight, we're trying to connect you...")
+		//sendSMS(num, "Hang tight, we're trying to connect you...")
 		// Try to connect user if there is someone free in the lobby
-		//check if another user in lobby
 		MatchLobbiedUsers()
-		return
-
 	case "DISCONNECT":
 		if isPaired {
 			lobby[pairs[users[num]]] = true
 			sendSMS(num, "You have successfully disconnected.")
-			sendSMS(pairs[users[num]].phoneNumber, "You're partner left the chat, please hang tight while we find someone new to chat with.")
+			sendSMS(pairs[users[num]].phoneNumber, "Your partner left the chat; please hang tight while we find someone new to chat with.")
 			delete(pairs, pairs[users[num]])
 			delete(pairs, users[num])
 			// Unpair them
@@ -113,29 +124,27 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 		} else {
 			sendSMS(num, "You're already disconnected! You can reconnect by texting CONNECT.")
 		}
-		return
 	case "NEXT":
 		if isPaired {
 			lobby[pairs[users[num]]] = true
 			lobby[users[num]] = true
 			// Unpair them
 			sendSMS(num, "You left the chat, please hang tight while we find someone new to chat with.")
-			sendSMS(pairs[users[num]].phoneNumber, "You're partner left the chat, please hang tight while we find someone new to chat with.")
+			sendSMS(pairs[users[num]].phoneNumber, "Your partner left the chat, please hang tight while we find someone new to chat with.")
 			delete(pairs, pairs[users[num]])
 			delete(pairs, users[num])
 			MatchLobbiedUsers()
 		} else if isInLobby {
 			sendSMS(num, "Please wait! We're still trying to find someone for you to chat with...")
-		}
-		if isRegistered {
-			sendSMS(num, "Hang tight, we're trying to connect you...")
+		} else {
+			// Add the user to the lobby
 			lobby[users[num]] = true
+			fmt.Printf("Added %s to lobby\n", num)
+			// sendSMS(num, "Hang tight, we're trying to connect you...")
 			MatchLobbiedUsers()
 		}
-		return
 	case "BLOCK":
 		if isPaired {
-			//TODO: actually block the other person
 			sendSMS(num, "You've blocked the other user and been added to the lobby")
 			sendSMS(pairs[users[num]].phoneNumber, "Your partner left the chat, please hang tight while we find someone new to chat with.")
 
@@ -151,7 +160,6 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 		} else {
 			sendSMS(num, "You're not currently chatting with anyone.")
 		}
-		return
 	default:
 		if isPaired {
 			log.Printf("%s => %s: %s\n", num, pairs[users[num]].phoneNumber, msg)
@@ -160,12 +168,10 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 		} else {
 			sendInstructions(num)
 		}
-		return
 	}
 }
 
 func sendSMS(phonenumber, message string) {
-
 	apiusr := os.Getenv("TWILIO_APIUSR")
 	apikey := os.Getenv("TWILIO_APIKEY")
 
@@ -184,6 +190,7 @@ func sendSMS(phonenumber, message string) {
 
 	req.SetBasicAuth(apiusr, apikey)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	log.Printf("sendSMS(%s, %s)", phonenumber, message)
 	//fmt.Printf("the request was: \n%v\n\n",req)
 
 	resp, err := hc.Do(req)
