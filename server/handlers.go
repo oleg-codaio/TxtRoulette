@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -47,6 +48,7 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 		}
 		// Add the user to the lobby
 		lobby[users[num]] = true
+		fmt.Printf("added  %s to lobby\n", num)
 		sendSMS(num, "Hang tight, we're trying to connect you...")
 		// Try to connect user if there is someone free in the lobby
 		//check if another user in lobby
@@ -55,6 +57,7 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 				//pair the users
 				pairs[users[num]] = user
 				pairs[user] = users[num]
+				fmt.Printf("paired %s & %s\n", num, user.phoneNumber)
 				//remove the users from the lobby
 				delete(lobby, users[num])
 				delete(lobby, user)
@@ -77,25 +80,43 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 		return
 	case "NEXT":
 		if isPaired {
+			lobby[pairs[users[num]]] = true
+			lobby[users[num]] = true
 			// Unpair them
-			// Put the user back into the lobby
+			delete(pairs,pairs[users[num]])
+			delete(pairs,users[num])
 		} else if isInLobby {
 			sendSMS(num, "Please wait! We're still trying to connect you...")
 		}
+		if isRegistered {
+			lobby[users[num]] = true
+		}
+		return
 	case "BLOCK":
 		if isPaired {
+//TODO: actually block the other person
+			sendSMS(num, "you've blocked the other user and been added to the lobby")
+			sendSMS(pairs[users[num]].phoneNumber, "you've been blocked by the other user and been added to the lobby")
 			// Add paired number to user's block list
-			// Unpair them
+			//users[num].blocked
 			// Put the user back into the lobby
+			lobby[pairs[users[num]]] = true
+			lobby[users[num]] = true
+			// Unpair them
+			delete(pairs,pairs[users[num]])
+			delete(pairs,users[num])
 		} else {
 			sendSMS(num, "You're not currently chatting with anyone")
 		}
+		return
 	default:
 		if isPaired {
+			sendSMS(pairs[users[num]].phoneNumber, msg)
 			// Send the msg to the paired user.
 		} else {
 			sendInstructions(num)
 		}
+		return
 	}
 }
 

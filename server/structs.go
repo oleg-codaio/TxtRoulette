@@ -8,7 +8,7 @@ type User struct {
 	blocked     []*User
 }
 
-func New(phoneNumber string) *User {
+func NewUser(phoneNumber string) *User {
 	return &User{
 		phoneNumber: phoneNumber,
 		recent:      make([]*User, userRecentSize),
