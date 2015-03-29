@@ -16,7 +16,7 @@ func main() {
 	port := ":" + os.Args[1]
 
 	// Make sure environment variables are set.
-	if len(os.Getenv("TWILIO_APIUSR")) >= 0 || len(os.Getenv("TWILIO_APIKEY")) >= 0 {
+	if len(os.Getenv("TWILIO_APIUSR")) == 0 || len(os.Getenv("TWILIO_APIKEY")) == 0 {
 		log.Fatal("Please set your TWILIO_APIUSR and TWILIO_APIKEY environment variables.")
 	}
 
