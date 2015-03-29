@@ -36,15 +36,31 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 	case "CONNECT":
 		if !isRegistered {
 			// Add user to users
+			u := NewUser(num)
+			users[num] = u
 		} else if isPaired {
 			sendSMS(num, "Invalid command. Use NEXT, DISCONNECT, or BLOCK.")
 			return
 		} else if isInLobby {
 			sendSMS(num, "Please wait! We're still trying to connect you...")
+			return
 		}
 		// Add the user to the lobby
+		lobby[users[num]] = true
 		sendSMS(num, "Hang tight, we're trying to connect you...")
 		// Try to connect user if there is someone free in the lobby
+		//check if another user in lobby
+		for user := range lobby{
+			if (users[num]) != user{
+				//pair the users
+				pairs[users[num]] = user
+				//remove the users from the lobby
+				delete(lobby, users[num])
+				delete(lobby, user)
+			}
+		}
+		return
+
 	case "DISCONNECT":
 		if isPaired {
 			// Unpair them
