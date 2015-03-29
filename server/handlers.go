@@ -54,6 +54,7 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 			if (users[num]) != user{
 				//pair the users
 				pairs[users[num]] = user
+				pairs[user] = users[num]
 				//remove the users from the lobby
 				delete(lobby, users[num])
 				delete(lobby, user)
@@ -63,12 +64,17 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 
 	case "DISCONNECT":
 		if isPaired {
+			lobby[pairs[users[num]]] = true
+			delete(pairs,pairs[users[num]])
+			delete(pairs,users[num])
 			// Unpair them
 		} else if isInLobby {
+			delete(lobby, users[num])
 			// Remove them from the lobby
 		} else {
 			sendSMS(num, "You're already disconnected!")
 		}
+		return
 	case "NEXT":
 		if isPaired {
 			// Unpair them
