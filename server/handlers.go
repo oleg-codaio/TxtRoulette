@@ -19,24 +19,23 @@ var pairs = make(map[*User]*User)
 // Lobby of unpaired Users.
 var lobby = make(map[*User]bool, 0)
 
-
-func MatchLobbiedUsers(){
-	if len(lobby) < 2{
+func MatchLobbiedUsers() {
+	if len(lobby) < 2 {
 		return
 	}
-	for u1 := range lobby{
-		for u2 := range lobby{
-			if u1 == u2{//don't match with self
+	for u1 := range lobby {
+		for u2 := range lobby {
+			if u1 == u2 { //don't match with self
 				continue
 			}
-			for _,block := range u1.blocked	{
-				if block == u2{
-					continue//u1 blocked u2
+			for _, block := range u1.blocked {
+				if block == u2 {
+					continue //u1 blocked u2
 				}
 			}
-			for _,block := range u2.blocked {
+			for _, block := range u2.blocked {
 				if block == u1 {
-					continue//u2 blocked u1
+					continue //u2 blocked u1
 				}
 			}
 
@@ -53,8 +52,6 @@ func MatchLobbiedUsers(){
 	}
 	return
 }
-
-
 
 func Receive(w http.ResponseWriter, r *http.Request) {
 	msg := strings.TrimSpace(r.URL.Query()["Body"][0])
@@ -91,20 +88,6 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 		sendSMS(num, "Hang tight, we're trying to connect you...")
 		// Try to connect user if there is someone free in the lobby
 		//check if another user in lobby
-		//TODO: implement recent + blocked
-//		for user := range lobby{
-//			if (users[num]) != user{
-//				//pair the users
-//				pairs[users[num]] = user
-//				pairs[user] = users[num]
-//				sendSMS(num, "you've been paired with another person, say hi!")
-//				sendSMS(user.num, " you've been paired with another person, say hi!")
-//				fmt.Printf("paired %s & %s\n", num, user.phoneNumber)
-				//remove the users from the lobby
-//				delete(lobby, users[num])
-//				delete(lobby, user)
-//			}
-//		}
 		MatchLobbiedUsers()
 		return
 
@@ -113,8 +96,8 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 			lobby[pairs[users[num]]] = true
 			sendSMS(num, "You have successfully disconnected.")
 			sendSMS(pairs[users[num]].phoneNumber, "You're partner left the chat, please hang tight while we find someone new to chat with.")
-			delete(pairs,pairs[users[num]])
-			delete(pairs,users[num])
+			delete(pairs, pairs[users[num]])
+			delete(pairs, users[num])
 			// Unpair them
 			MatchLobbiedUsers()
 		} else if isInLobby {
@@ -132,8 +115,8 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 			// Unpair them
 			sendSMS(num, "You left the chat, please hang tight while we find someone new to chat with.")
 			sendSMS(pairs[users[num]].phoneNumber, "You're partner left the chat, please hang tight while we find someone new to chat with.")
-			delete(pairs,pairs[users[num]])
-			delete(pairs,users[num])
+			delete(pairs, pairs[users[num]])
+			delete(pairs, users[num])
 			MatchLobbiedUsers()
 		} else if isInLobby {
 			sendSMS(num, "Please wait! We're still trying to find someone for you to chat with...")
@@ -146,18 +129,18 @@ func Receive(w http.ResponseWriter, r *http.Request) {
 		return
 	case "BLOCK":
 		if isPaired {
-//TODO: actually block the other person
+			//TODO: actually block the other person
 			sendSMS(num, "you've blocked the other user and been added to the lobby")
 			sendSMS(pairs[users[num]].phoneNumber, "You're partner left the chat, please hang tight while we find someone new to chat with.")
 
 			// Add paired number to user's block list
-			//users[num].blocked
+			users[num].blocked = append(users[num].blocked, pairs[users[num]])
 			// Put the user back into the lobby
 			lobby[pairs[users[num]]] = true
 			lobby[users[num]] = true
 			// Unpair them
-			delete(pairs,pairs[users[num]])
-			delete(pairs,users[num])
+			delete(pairs, pairs[users[num]])
+			delete(pairs, users[num])
 			MatchLobbiedUsers()
 		} else {
 			sendSMS(num, "You're not currently chatting with anyone.")
