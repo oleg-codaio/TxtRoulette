@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,17 +9,72 @@ import (
 	"strings"
 )
 
+// Map from phone number <=> User.
 var users = make(map[string]*User)
+
+// Pairs of currently connected Users.
 var pairs = make(map[*User]*User)
-var lobby = make([]*User, 0)
+
+// Lobby of unpaired Users.
+var lobby = make(map[*User]bool, 0)
 
 func Receive(w http.ResponseWriter, r *http.Request) {
+	msg := strings.TrimSpace(r.URL.Query()["Body"][0])
+	num := r.URL.Query()["From"][0]
 
-	wholeurl := r.URL.String()
-	body := r.URL.Query()["Body"]
-	phone := r.URL.Query()["From"]
+	user, isRegistered := users[num]
+	_, isInLobby := lobby[user]
+	_, isPaired := pairs[user]
 
-	fmt.Printf("wholeurl:\n%s\n\nPhone: %s\nBody: %s,\n\n", wholeurl, phone, body)
+	if !isRegistered && msg != "CONNECT" {
+		// TODO: reply using ResponseWriter instead of calling SendSMS
+		sendInstructions(num)
+		return
+	}
+
+	switch msg {
+	case "CONNECT":
+		if !isRegistered {
+			// Add user to users
+		} else if isPaired {
+			sendSMS(num, "Invalid command. Use NEXT, DISCONNECT, or BLOCK.")
+			return
+		} else if isInLobby {
+			sendSMS(num, "Please wait! We're still trying to connect you...")
+		}
+		// Add the user to the lobby
+		sendSMS(num, "Hang tight, we're trying to connect you...")
+		// Try to connect user if there is someone free in the lobby
+	case "DISCONNECT":
+		if isPaired {
+			// Unpair them
+		} else if isInLobby {
+			// Remove them from the lobby
+		} else {
+			sendSMS(num, "You're already disconnected!")
+		}
+	case "NEXT":
+		if isPaired {
+			// Unpair them
+			// Put the user back into the lobby
+		} else if isInLobby {
+			sendSMS(num, "Please wait! We're still trying to connect you...")
+		}
+	case "BLOCK":
+		if isPaired {
+			// Add paired number to user's block list
+			// Unpair them
+			// Put the user back into the lobby
+		} else {
+			sendSMS(num, "You're not currently chatting with anyone")
+		}
+	default:
+		if isPaired {
+			// Send the msg to the paired user.
+		} else {
+			sendInstructions(num)
+		}
+	}
 }
 
 func sendSMS(phonenumber, message string) {
@@ -57,4 +111,8 @@ func sendSMS(phonenumber, message string) {
 		}
 		log.Print(body)
 	}
+}
+
+func sendInstructions(phoneNumber string) {
+	sendSMS(phoneNumber, "Welcome to TxtRoulette! Text CONNECT to start, or DISCONNECT, NEXT, and BLOCK.")
 }
